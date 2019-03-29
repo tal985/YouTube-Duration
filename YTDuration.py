@@ -25,10 +25,6 @@ API_VERSION = "v3"
 
 def get_authenticated_service():
 
-    #if not os.path.exists(credential_path):
-    #    with open(credential_path, "w") as temp: pass
-    #temp.close
-
     store = Storage("credential_sample.json")
     credentials = store.get()
 
@@ -38,6 +34,7 @@ def get_authenticated_service():
 
     return build(API_SERVICE_NAME, API_VERSION, credentials = credentials)
 
+# Find the channel ID from a username
 def get_id_from_username(service, **kwargs):
 
     results = service.channels().list(**kwargs).execute()
@@ -67,12 +64,14 @@ def search_list_by_keyword(client, **kwargs):
 
     return response
 
+# Find the duration of the video from the video ID
 def get_duration_from_vid(client, **kwargs):
 
   kwargs = remove_empty_kwargs(**kwargs)
   response = client.videos().list(**kwargs).execute()
   return response["items"][0]["contentDetails"]["duration"]
 
+# Sum up all the duration of the videos on the current "page" 
 def process_response_page(response):
 
     global totalDur
@@ -93,17 +92,15 @@ def process_response_page(response):
 
     print("Total Duration (So Far): " + str(totalDur))
 
-
-totalDur = datetime.timedelta()
-
 if __name__ == "__main__":
-    
+
     if len(sys.argv) != 3:
         sys.exit("Invalid amount of arguments.")
     url = sys.argv[1]
     searchterm = 'intitle:"' + sys.argv[2] + '"'
     sys.argv = [sys.argv[0]]
-
+    totalDur = datetime.timedelta()
+        
     # When running locally, disable OAuthlib's HTTPs verification. When
     # running in production *do not* leave this option enabled.
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
@@ -131,12 +128,6 @@ if __name__ == "__main__":
         id = url
     else:
         sys.exit("Malformed URL.")
-
-    #Etho's ID
-    #id = "UCFKDEp9si4RmHFWJW1vYsMA"
-    #searchterm = input("Enter search term: \n")
-    #searchterm = "intitle:\"Etho Plays Minecraft\""
-    #searchterm = "LONGEST VIDEO ON YOUTUBE"
 
     if id:
         #Get first page
