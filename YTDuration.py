@@ -102,7 +102,6 @@ if __name__ == "__main__":
         sys.exit("Invalid amount of arguments.")
     url = sys.argv[1]
     searchterm = 'intitle:"' + sys.argv[2] + '"'
-    print(url + "\n" + searchterm)
     sys.argv = [sys.argv[0]]
 
     # When running locally, disable OAuthlib's HTTPs verification. When
@@ -110,79 +109,71 @@ if __name__ == "__main__":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
     service = get_authenticated_service()
 
+    #URL will turn to a user name or channel ID
+    #Legacy username format
+    if "www.youtube.com/user/" in url:
+        index = url.index("r/")
+        url = url[index + 2:]
+        if "/" in url:
+            index = url.index("/")
+            url = url[:index]
+        id = get_id_from_username(service, 
+            part = "snippet",
+            fields = "items/id",
+            forUsername = url)
+    #New channel format
+    elif "www.youtube.com/channel/" in url:
+        index = url.index("l/")
+        url = url[index + 2:]
+        if "/" in url:
+            index = url.index("/")
+            url = url[:index]
+        id = url
+    else:
+        sys.exit("Malformed URL.")
 
-    ##url = "https://www.youtube.com/user/EthosLab/featured"
-    ##url = "https://www.youtube.com/channel/UCDK9qD5DAQML-pzrtA7A4oA/wtfisthis?"
-    ##url = "malformedurl"
-    ##url = "https://www.youtube.com/user/dwkasd"
-    ##url = "https://www.youtube.com/channel/notarealid"
-    ##url = "https://www.youtube.com/user/MoldytoasterMedia"
+    #Etho's ID
+    #id = "UCFKDEp9si4RmHFWJW1vYsMA"
+    #searchterm = input("Enter search term: \n")
+    #searchterm = "intitle:\"Etho Plays Minecraft\""
+    #searchterm = "LONGEST VIDEO ON YOUTUBE"
 
-    ##URL will turn to a user name or channel ID
-    ##Legacy username format
-    #if "www.youtube.com/user/" in url:
-    #    index = url.index("r/")
-    #    url = url[index + 2:]
-    #    if "/" in url:
-    #        index = url.index("/")
-    #        url = url[:index]
-    #    id = get_id_from_username(service, 
-    #        part = "snippet",
-    #        fields = "items/id",
-    #        forUsername = url)
-    ##New channel format
-    #elif "www.youtube.com/channel/" in url:
-    #    index = url.index("l/")
-    #    url = url[index + 2:]
-    #    if "/" in url:
-    #        index = url.index("/")
-    #        url = url[:index]
-    #    id = url
-    #else:
-    #    sys.exit("Malformed URL.")
+    if id:
+        #Get first page
+        temp = search_list_by_keyword(service, 
+            part = "id",
+            channelId = id,
+            fields = "nextPageToken, items/id/videoId",
+            maxResults = 50,
+            q = searchterm,
+            type = "video")
 
-    ##Etho's ID
-    ##id = "UCFKDEp9si4RmHFWJW1vYsMA"
-    ##searchterm = input("Enter search term: \n")
-    ##searchterm = "intitle:\"Etho Plays Minecraft\""
-    ##searchterm = "LONGEST VIDEO ON YOUTUBE"
+        #If first page exists
+        if temp:
+            process_response_page(temp)
 
-    #if id:
-    #    #Get first page
-    #    temp = search_list_by_keyword(service, 
-    #        part = "id",
-    #        channelId = id,
-    #        fields = "nextPageToken, items/id/videoId",
-    #        maxResults = 50,
-    #        q = searchterm,
-    #        type = "video")
+            #if there's a next page
+            if "nextPageToken" in temp:
+                nextpage = temp["nextPageToken"]
+            else:
+                nextpage = None
 
-    #    #If first page exists
-    #    if temp:
-    #        process_response_page(temp)
+            #While there's a next page
+            while nextpage:
+                #Get the next page as the current page
+                temp = search_list_by_keyword(service, 
+                    part = "snippet",
+                    channelId = id,
+                    fields = "nextPageToken, items/id/videoId",
+                    maxResults = 50,
+                    q = searchterm,
+                    type = "video",
+                    pageToken = nextpage)
 
-    #        #if there's a next page
-    #        if "nextPageToken" in temp:
-    #            nextpage = temp["nextPageToken"]
-    #        else:
-    #            nextpage = None
-
-    #        #While there's a next page
-    #        while nextpage:
-    #            #Get the next page as the current page
-    #            temp = search_list_by_keyword(service, 
-    #                part = "snippet",
-    #                channelId = id,
-    #                fields = "nextPageToken, items/id/videoId",
-    #                maxResults = 50,
-    #                q = searchterm,
-    #                type = "video",
-    #                pageToken = nextpage)
-
-    #            #If the current page exists, process then update the next page token
-    #            if temp:
-    #                process_response_page(temp)
-    #                if "nextPageToken" in temp:
-    #                    nextpage = temp["nextPageToken"]
-    #                else:
-    #                    nextpage = None
+                #If the current page exists, process then update the next page token
+                if temp:
+                    process_response_page(temp)
+                    if "nextPageToken" in temp:
+                        nextpage = temp["nextPageToken"]
+                    else:
+                        nextpage = None
